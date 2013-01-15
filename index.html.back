@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style type="text/css">
+#map {
+  width: 1000px;
+  height: 600px;
+  position:relative;
+}
+ 
+path {
+  fill: #08C;
+  fill-opacity: .5;
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+#arcs path {
+  fill: none;
+  stroke: #555;
+  stroke-width: 1px;
+  stroke-opacity: .75;
+}
+
+#denver {
+  fill: #F00;
+  z-index:1000;
+}
+
+#cnt {
+  position:absolute;
+  bottom:0px;
+  left:0px;
+  font-size:64px;
+  color:#555;
+  opacity:.7;
+  z-index:100;
+}
+ 
+    </style>
+    <script type="text/javascript" src="https://raw.github.com/stamen/modestmaps-js/master/modestmaps.min.js"></script>
+    <script type="text/javascript" src="http://d3js.org/d3.v2.js"></script>
+  </head>
+<body>
+<div id="map">
+  <div id="cnt"></div>
+  <div id="repoe"></div>
+</div>
+<input type="range" id="map-control" value="0" min="0" max="103" onChange="javascript:onSlide(this)" style="width:1000px" />
+<script type="text/javascript">
+  var denver = {properties:{}, geometry: { coordinates: [-105.003011, 39.745147], type:'Point'}},
+    cur_idx = 0,
+    bounds = [[-178.123152, 17.929556], [173.304726, 71.351633]],
+    MM = com.modestmaps;
+ 
+  var template = "http://{S}.acetate.geoiq.com/tiles/acetate/{Z}/{X}/{Y}.png";
+  var provider = new MM.TemplatedLayer(template, ['a1', 'a2', 'a3', 'a0']);
+  var map = new MM.Map("map", provider);
+  map.setCenterZoom(new MM.Location(37.8, -96.9), 4);
+ 
+  var svg = d3.select("#map").append("svg");
+
+  var arcs = svg.append("svg:g")
+    .attr("id", "arcs");
+
+  var g = svg.append("g");
+ 
+  var feature = g.selectAll("path");
+  var lines = arcs.selectAll("path");
+
+  svg.style("position", "absolute");
+ 
+  var project = function(x) {
+    
+    var point = map.locationPoint(new MM.Location(x[1], x[0]));
+    return [point.x, point.y];
+  };
+
+  var arc = d3.geo.greatArc();
+
+  var arcPath = d3.geo.path().projection(project);
+
+  var path = d3.geo.path()
+   .pointRadius(function(d){
+     if (d.features[0].properties['ticket revenue (usd)'] == 10){
+         return 5;
+     } else {
+         return 10;
+     }
+   }).projection(project);
+    
+
+  render = function(f, id){
+    g.append("path")
+      .datum({type: "FeatureCollection", features: [f]})
+      .attr("d", path)
+      .attr("id", id);
+    feature = g.selectAll("path");
+
+    links = [];
+    links.push({
+       source: denver.geometry.coordinates,
+       target: f.geometry.coordinates
+    });
+
+    arcs.append('path')
+      .data(links)
+      .attr("d", function(d) { return arcPath(arc(d)); })
+      .attr("id", id);
+    
+    lines = arcs.selectAll("path");
+  }
+
+  var reset = function(m) {
+        var bottomLeft = project(bounds[0]),
+            topRight = project(bounds[1]);
+ 
+        svg.attr("width", topRight[0] - bottomLeft[0])
+            .attr("height", bottomLeft[1] - topRight[1])
+            .style("margin-left", bottomLeft[0] + "px")
+            .style("margin-top", topRight[1] + "px");
+ 
+        g.attr("transform", "translate(" + -bottomLeft[0] + "," + -topRight[1] + ")");
+        arcs.attr("transform", "translate(" + -bottomLeft[0] + "," + -topRight[1] + ")");
+        feature.attr("d", path);
+        lines.attr("d", function(d) { return arcPath(arc(d)); });
+  };
+  map.addCallback("drawn", reset);
+  
+  g.append("path")
+    .datum({type: "FeatureCollection", features: [denver]})
+    .attr("id", "denver")
+    .attr("d", d3.geo.path().projection(project));
+
+  d3.json("http://geocommons.com/overlays/308876/features.json", function(collection) {
+    features = collection;
+
+    // 1. Initialize a list of names
+    // 2. render a bar chart 
+    // 3. turn bars in graduated symbols  
+
+  });
+  reset();
+
+  function onSlide(slider){
+    idx = document.getElementById(slider.id).value;
+    console.log(idx, cur_idx);
+    if (idx <= cur_idx){
+      try {
+        var i = parseInt(idx)+1;
+        document.getElementById(i).parentNode.removeChild(document.getElementById(i))
+      } catch(e){
+        console.log('ERROR', e)
+      }
+    } else if ( idx > cur_idx ){
+        if (features.features[idx-1].geometry){
+          render(features.features[idx-1], idx);
+        } 
+    }
+    cur_idx = idx;
+    document.getElementById('cnt').innerHTML = cur_idx;
+  }
+
+</script>
+ 
+</body>
+</html>

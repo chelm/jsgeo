@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+ 
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<style type="text/css">
+ 
+body{
+  background:white;
+}
+svg {
+  width: 960px;
+  height: 900px;
+  background: #DDD;
+}
+
+.proj {
+  font-size: 34px;
+}
+ 
+ 
+</style>
+  </head>
+  <body>
+  <script type="text/javascript">
+ 
+  var svg = d3.select("body")
+    .append("svg")
+    .call(d3.behavior.zoom()
+    .on("zoom", redraw))
+    .append("g");
+  
+  // graphics layer
+  var countries = svg.append("g").attr("id", "countries");
+  var states = svg.append("g").attr("id", "states");
+
+  // our renderer  
+  var path = d3.geo.path();
+  
+  // our projection
+  var projection = d3.geo.albers()
+ 
+  // get countries and add to the map
+  d3.json("../world-countries.json", function(collection) {
+ 
+  countries.selectAll("path")
+    .data(collection.features)
+    .enter().append("path")
+      .style('fill', function( d ){ return '#555'; })
+      .attr('class', 'country')
+      .attr("d", path.projection( projection ))
+
+  });
+
+  // random color scale;
+  var colors = d3.scale.category10();
+
+  // get states  and add to the map
+  d3.json("../us-states.json", function(collection) {
+    states.selectAll("path")
+      .data(collection.features)
+      .enter().append("path")
+        .style('fill', function( d ){ return colors( d.properties.name ); })
+        .style('stroke', '#fff')
+        .style('stroke-width', '1.5px')
+        .attr('class', 'state')
+        .attr("d", path.projection( projection ))
+
+  });
+
+
+  var projs = ['mercator', 'albers', 'azimuthalEqualArea'];
+
+  d3.select('body').selectAll('div.proj')
+    .data( projs )
+    .enter().append('div')
+      .text( function( d ) { return d; })
+      .attr('class', 'proj')
+      .on('click', function(){
+        reproject( this.innerHTML );
+      })
+  
+ 
+  function redraw() {
+    svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+  }
+
+  function reproject( proj ){
+    // the new projection 
+    var p = d3.geo[ proj ];
+
+    // update all paths 
+    countries.selectAll("path").transition().duration(1000).attr("d", d3.geo.path().projection( p() ));
+    states.selectAll("path").transition().duration(1000).attr("d", d3.geo.path().projection( p() ));
+
+  }
+ 
+  </script>
+  </body>
+</html>

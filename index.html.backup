@@ -10,13 +10,9 @@ body {
 
 #map {
   width: 1000px;
-  margin:auto;
-  padding-top:100px
-}
-
-circle:hover {
-  cursor:pointer;
-  fill:#0FF;
+  height: 600px;
+  position:relative;
+  display:none;
 }
  
 path {
@@ -54,14 +50,6 @@ path {
   color:#000;
 }
 
-.projs {
-  position:absolute;
-  top:75px;  
-  left:0px;
-  font-size:36px;
-  color:#fff;
-}
-
 #next {
   width:100%;
   height:50px;
@@ -94,64 +82,34 @@ hr {
  margin:0px;
 }
 
-.counter {
-  position:absolute;
-  top:0px;
-  right:0px;
-  font-size:80px;
-  color:#fff;
-}
-
 #name {
   position:absolute;
   top:0px;
   left:0px;
   font-size:80px;
 }
-
-.state {
-  fill: #000;
-}
-
-#code{
-  position:absolute;
-  bottom:50px;
-  left:0px;
-  font-size:34px;
-  text-align: center;
-  width:100%; 
-  border:1px solid;
-}
  
     </style>
+    <script type="text/javascript" src="https://raw.github.com/stamen/modestmaps-js/master/modestmaps.min.js"></script>
     <script type="text/javascript" src="http://d3js.org/d3.v2.min.js"></script>
-    <script src="colorbrewer.js"></script>
-    <script type="text/javascript" src="geojson-utils.js"></script>
     <script type="text/javascript" src="jsgeo.js"></script>
   </head>
 <body>
-<div id="code"> Chris Helm</div>
 <div id="next" onclick="next();">Next</div>
+<div id="map">
+  <div id="cnt"></div>
+  <div id="repoe"></div>
+</div>
 <script type="text/javascript">
-  d3.json("http://geocommons.com/overlays/310477/features.json", function( data ){
+  d3.json("http://geocommons.com/overlays/309397/features.json", function( data ){
     geojson = data;
-    u = {},
-      state_cnt = 0;
-    geojson.features.forEach(function(f){
-      if (!u[f.properties.state]){
-        u[f.properties.state] = f.properties.repos;
-        state_cnt++;
-      } else {
-        u[f.properties.state] += f.properties.repos
-      }
-    });
     d3.json("us-states.json", function( s ){
       states = s;
       intro();
     });
   });
 
-  var script = [ bubble, bubble_class, bubble_color, map, map_class, aggregate, start_projs, streaming, time_animation, add_time ],
+  var script = [ bubble, bubble_class, map, map_class, aggregate, albers, butterfly ],
     step = 0;
 
   function next( ) {

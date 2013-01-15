@@ -1,0 +1,328 @@
+
+function intro(){
+  var sum = d3.sum(geojson.features, function(d){ return d.properties.repos});
+  var div = d3.select('body')
+    .append('div')
+    .attr('class', 'intro')
+
+  div.append('div')   
+      .attr('class', 'header') 
+      .html('JS.Geo<hr/>')
+
+  div.append('div')
+      .attr('class', 'stat')
+      .html('2 days <hr/>')
+    .append('div')
+      .attr('class', 'stat')
+      .html( geojson.features.length + ' People<hr/>')
+    .append('div')
+      .attr('class', 'stat')
+      .html( 10 + ' States<hr/>')
+    .append('div')
+      .attr('class', 'stat')
+      .text( sum + ' Repos');
+}
+
+function bubble(){
+
+  /*d3.select('div.header').transition()
+    .duration(1000)
+    .attr('top', '0px')
+    .attr('left', '0px')
+    .style('position', 'absolute')*/
+    
+
+  d3.select('div.intro').style("opacity", 1)
+    .transition()
+      .duration(1000)
+      .style("opacity", 1e-6)
+      .each('end', function(){
+        d3.select(this).style('display', 'none');
+
+        var w = 800, h = 800;
+
+        var div = d3.select("body")
+          .append('div')
+            .style("width", '800px')
+            .style('margin', 'auto')
+
+        d3.select('body').append('div')
+          .attr('id', 'name');
+  
+        var vis = div.append("svg")
+            .attr("width", w)
+            .attr("height", h)
+            .attr("class", "bubble");
+
+        var  fill = d3.scale.category10();
+
+        force = d3.layout.force()
+          .nodes(geojson.features)
+          .links([])
+          .gravity(.05)
+          .charge(-50) //function(d, i){ return i ? 0 : -2000 })
+          .size([w, h])
+          .start();
+
+        var node = vis.selectAll("circle.node")
+          .data(geojson.features)
+          .enter().append("svg:circle")
+            .attr("class", "node")
+            .attr("cx", function(d) { return d.x; })
+            .attr("cy", function(d) { return d.y; })
+            .attr("r", 10)
+            .attr("id", function(d){ return d.properties.last})
+            //.attr("r", function(d){ return d.properties.repos; })
+            .style("fill", '#777')
+            .style("stroke", '#08c')
+            .style("stroke-width", 1.5)
+            .call(force.drag)
+            .on('mouseover', function(){
+              console.log(this.id)
+              d3.select('#name').text(this.id);
+            });
+
+        force.on("tick", function(e) {
+          node.attr("cx", function(d) { return d.x; })
+            .attr("cy", function(d) { return d.y; })
+        });
+
+        vis.style("opacity", 1e-6)
+          .transition()
+            .duration(1000)
+            .style("opacity", 1);
+
+      })
+}
+
+function bubble_class(){
+  d3.selectAll('circle.node')
+    .transition()
+    .duration(750)
+    .attr("r", function(d){ return d.properties.repos || 10 });
+
+  force.charge(function(d){return d.properties.repos*-10})
+  force.start();
+}
+
+
+
+function map(){
+
+  /*d3.select('svg.bubble').selectAll('circle.node')
+    .transition()
+    .duration(750)
+    .attr("cy", document.height)
+    .each('end', function(){*/
+      d3.select('svg.bubble').transition()
+        .duration(1500)
+        .style("display", "none");
+
+
+  var denver = {properties:{}, geometry: { coordinates: [-105.003011, 39.745147], type:'Point'}},
+    bounds = [[-178.123152, 17.929556], [173.304726, 71.351633]],
+    MM = com.modestmaps;
+ 
+  var template = "http://{S}.acetate.geoiq.com/tiles/acetate/{Z}/{X}/{Y}.png";
+  var provider = new MM.TemplatedLayer(template, ['a1', 'a2', 'a3', 'a0']);
+  map = new MM.Map("map", provider);
+  map.setCenterZoom(new MM.Location(37.8, -96.9), 4);
+
+  d3.select('#map')
+    .style("opacity", 1e-6)
+    .style('display', 'block')
+    .transition()
+      .duration(1000)
+      .style("opacity", 1);
+ 
+  svg = d3.select("#map").append("svg");
+
+  arcs = svg.append("svg:g")
+    .attr("id", "arcs");
+
+  g = svg.append("g").attr('class', 'dots');
+ 
+  feature = g.selectAll("path");
+  lines = arcs.selectAll("path");
+
+  svg.style("position", "absolute");
+ 
+  project = function(x) {
+    var point = map.locationPoint(new MM.Location(x[1], x[0]));
+    return [point.x, point.y];
+  };
+
+  arc = d3.geo.greatArc();
+  arcPath = d3.geo.path().projection(project);
+  path = d3.geo.path().projection(project);
+    
+  reset = function(m) {
+    
+    console.log('reset1');
+    feature = g.selectAll("path");
+    lines = arcs.selectAll("path");
+
+        var bottomLeft = project(bounds[0]),
+            topRight = project(bounds[1]);
+ 
+        svg.attr("width", topRight[0] - bottomLeft[0])
+            .attr("height", bottomLeft[1] - topRight[1])
+            .style("margin-left", bottomLeft[0] + "px")
+            .style("margin-top", topRight[1] + "px");
+ 
+        g.attr("transform", "translate(" + -bottomLeft[0] + "," + -topRight[1] + ")");
+        feature.attr("d", path);
+        
+        arcs.attr("transform", "translate(" + -bottomLeft[0] + "," + -topRight[1] + ")");
+        lines.attr("d", function(d) { return arcPath(arc(d)); });
+  };
+  map.addCallback("drawn", reset);
+ 
+  setTimeout(function(){ 
+
+    g.selectAll("path")
+      .data(geojson.features) 
+      .enter().append("path")
+        .attr("d", path);
+
+
+    links = [];
+    geojson.features.forEach(function(f) {
+      if (f && f.geometry && f.geometry.coordinates){
+        links.push({
+          source: denver.geometry.coordinates,
+          target: f.geometry.coordinates
+        });
+      }
+    });
+
+    arcs.selectAll('path')
+      .data(links)
+      .enter()
+      .append('path')
+        .attr("d", function(d) { return arcPath(arc(d)); })
+  },1000);
+
+  lines = arcs.selectAll("path");
+  feature = g.selectAll("path");
+  reset();
+    
+    //});
+}
+
+
+
+function map_class(){
+  console.log('map_class');
+  project = function(x) {
+    var point = map.locationPoint(new MM.Location(x[1], x[0]));
+    return [point.x, point.y];
+  };
+
+  var arc = d3.geo.greatArc();
+  var arcPath = d3.geo.path().projection(project);
+  var path = d3.geo.path()
+   .pointRadius(function(d){
+      if (d.properties.repos){
+        return d.properties.repos;
+      } else {
+        return 5;
+      }
+    }).projection(project);
+
+  d3.select('g.dots').selectAll('path').transition()
+    .duration(1000)
+    .attr("d", path); 
+  map.removeCallback('drawn', reset);
+  reset = function(m) {
+        console.log('reset2');
+    feature = g.selectAll("path");
+    lines = arcs.selectAll("path");
+
+        var bottomLeft = project(bounds[0]),
+            topRight = project(bounds[1]);
+
+        svg.attr("width", topRight[0] - bottomLeft[0])
+            .attr("height", bottomLeft[1] - topRight[1])
+            .style("margin-left", bottomLeft[0] + "px")
+            .style("margin-top", topRight[1] + "px");
+
+        g.attr("transform", "translate(" + -bottomLeft[0] + "," + -topRight[1] + ")");
+        feature.attr("d", path);
+
+        arcs.attr("transform", "translate(" + -bottomLeft[0] + "," + -topRight[1] + ")");
+        lines.attr("d", function(d) { return arcPath(arc(d)); });
+  };
+  map.addCallback("drawn", reset);
+
+}
+
+
+function aggregate(){
+  map.removeCallback('drawn');
+  /*d3.select('g.dots').selectAll('path').transition()
+    .duration(500)
+    .attr("d", d3.geo.path().pointRadius(function( d ){ return 0 }).projection( project ))*/;
+
+  var albers = d3.geo.albers();
+  
+  d3.select('g#arcs').remove();
+  d3.select('g.dots').remove()
+
+  d3.json("us-states.json", function(collection) {
+    console.log(collection);
+    
+    //collection.features.forEach(function(state){
+
+    //});
+    g = svg.append("g").attr('class', 'states');
+  
+    var bounds = d3.geo.bounds(collection),
+        path = d3.geo.path().projection(project);
+ 
+    var feature = g.selectAll("path")
+        .data(collection.features)
+      .enter().append("path")
+      .attr('class', 'state');
+
+
+ 
+      map.removeCallback('drawn', reset);
+      reset = function(m) {
+        console.log('reset3');
+        feature = g.selectAll("path.state");    
+        var bottomLeft = project(bounds[0]),
+            topRight = project(bounds[1]);
+ 
+        svg .attr("width", topRight[0] - bottomLeft[0])
+            .attr("height", bottomLeft[1] - topRight[1])
+            .style("margin-left", bottomLeft[0] + "px")
+            .style("margin-top", topRight[1] + "px");
+ 
+        g.attr("transform", "translate(" + -bottomLeft[0] + "," + -topRight[1] + ")");
+ 
+        feature.attr("d", d3.geo.path().projection( project ));
+      };
+ 
+      map.addCallback("drawn", reset);
+      reset();
+  });
+
+
+}
+
+
+function albers(){
+  map.removeCallback('drawn', reset);
+  feature = g.selectAll("path.state").transition().duration(1000).attr("d", d3.geo.path().projection( d3.geo.albers() ));
+
+}
+
+function butterfly(){
+  var proj = d3.geo.polyhedron.butterfly()
+    .scale(110)
+    .translate([width / 2, height * .745])
+    .rotate([20, 0]);
+
+  feature = g.selectAll("path.state").transition().duration(1000).attr("d", d3.geo.path().projection( proj ));
+}

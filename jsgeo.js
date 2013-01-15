@@ -30,6 +30,8 @@ function bubble(){
     .attr('top', '0px')
     .attr('left', '0px')
     .style('position', 'absolute')*/
+
+  d3.select('#code').text('d3.selectAll( "path" ).data( geojson ).enter().append( "path" )');
     
 
   d3.select('div.intro').style("opacity", 1)
@@ -105,6 +107,8 @@ function bubble_class(){
 
   force.charge(function(d){ return d.properties.repos*-10 })
   force.start();
+  
+  d3.select('#code').text('d3.selectAll( "circle" ).attr("r", function( d ) { return d.properties.repos; })');
 }
 
 
@@ -117,11 +121,15 @@ function bubble_color(){
   /*var color = d3.scale.quantile()
     .domain([0, 100])
     .range(["red", "white", "green"]);*/
+  d3.select('#code').text('d3.selectAll( "circle" ).style("fill", function( d ){ return color( d.properties.state ) })');
 }
 
 
 
 function map(){
+
+  d3.select('#code').text('');
+
   d3.select('svg.bubble').selectAll('circle')
     .transition()
     .duration(750)
